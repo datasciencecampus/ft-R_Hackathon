@@ -1,0 +1,34 @@
+nspl:
+  postcode_column: postcode
+  region_code_column: rgn_code
+
+addressbase:
+  postcode_column: postcode
+  classification_column: classification_code
+  property_id_column: null       # set to UPRN or another unique property ID if available
+  deduplicate_properties: false  # set true when property_id_column is supplied
+  classification_filter:
+    mode: prefix                 # exact | prefix | exact_or_prefix
+    include_exact: []
+    include_prefixes: [C]        # illustrative only; replace with approved business rule
+    exclude_exact: []
+    exclude_prefixes: []
+    missing_policy: exclude      # exclude | error
+
+visa:
+  postcode_area_column: postcode_area
+  postcode_district_column: postcode_district
+  postcode_sector_column: sector
+  postcode_unit_column: unit
+  spend_columns: [spend]
+  dimensions: [period, mcg]
+  aggregate_area_controls: true
+  suppressed_tokens: ["c", "s", "..", "-"]
+
+allocation:
+  unmatched_policy: retain       # retain | error
+  weight_tolerance: 1.0e-10
+  reconciliation_tolerance: 1.0e-8
+
+# Paste the approved project dictionary here.
+region_names: {}
