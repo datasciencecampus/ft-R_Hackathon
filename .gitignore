@@ -256,6 +256,7 @@ instance/*
 # website: http://jupyter.org/
 
 */.ipynb_checkpoints/*
+*/.jupyter/*
 
 # IPython
 
