@@ -1,0 +1,17 @@
+[build-system]
+requires=["hatchling"]
+build-backend="hatchling.build"
+[project]
+name="visa-itl1-memory"
+version="0.3.0"
+requires-python=">=3.10"
+dependencies=["pandas>=2.1","pyarrow>=12","PyYAML>=6","psutil>=5.9"]
+[project.optional-dependencies]
+dev=["pytest>=8","jupyter>=1"]
+[project.scripts]
+visa-itl1="visa_itl1.cli:main"
+[tool.hatch.build.targets.wheel]
+packages=["src/visa_itl1"]
+[tool.pytest.ini_options]
+pythonpath=["src"]
+addopts="-q"
