@@ -1,0 +1,18 @@
+from pathlib import Path
+import gc,json,yaml,pandas as pd
+from .io import read_table,write_table
+from .memory import enable_copy_on_write,report
+from .nspl import prepare_nspl
+from .addressbase import prepare_commercial_property_counts
+from .weights import match_counts_to_nspl,build_all_geography_weights
+from .visa import prepare_visa,create_level_controls
+from .allocation import allocate_level_controls
+def run_pipeline(*,nspl_path,addressbase_path,visa_path,config_path,output_dir):
+ enable_copy_on_write(); cfg=yaml.safe_load(Path(config_path).read_text()); out=Path(output_dir); a=cfg["addressbase"]; v=cfg["visa"]; z=cfg["allocation"]; mem=[]
+ nr=read_table(nspl_path); ns,ni=prepare_nspl(nr,postcode_column=cfg["nspl"]["postcode_column"],region_code_column=cfg["nspl"]["region_code_column"],region_names=cfg["region_names"]); del nr; gc.collect()
+ ab=read_table(addressbase_path); mem.append(report("addressbase_loaded",addressbase=ab)); counts,cs,ad=prepare_commercial_property_counts(ab,postcode_column=a["postcode_column"],classification_column=a.get("classification_column"),commercial_classification=a.get("commercial_classification","C"),missing_classification_policy=a.get("missing_classification_policy","exclude"),property_id_column=a.get("property_id_column"),deduplicate_properties=a.get("deduplicate_properties",False),input_mode=a.get("input_mode","raw"),count_column=a.get("count_column","commercial_property_count")); del ab; gc.collect(); mem.append(report("addressbase_reduced",postcode_counts=counts))
+ matched,ua=match_counts_to_nspl(counts,ns); del counts,ns; gc.collect(); levels=z.get("levels",["area","district","sector"]); weights,wd=build_all_geography_weights(matched,levels,z.get("weight_tolerance",1e-10)); del matched; gc.collect()
+ vr=read_table(visa_path); prepared,sq,status=prepare_visa(vr,postcode_level_column=v["postcode_level_column"],postcode_code_column=v["postcode_code_column"],postcode_levels=v["postcode_levels"],spend_columns=v["spend_columns"],dimensions=v.get("dimensions",[]),suppressed_tokens=v.get("suppressed_tokens",[]),unknown_level_policy=v.get("unknown_level_policy","retain")); del vr; gc.collect(); results=[]; audits=[]
+ for level in levels:
+  controls=create_level_controls(prepared,level=level,level_label=v["postcode_levels"][level],spend_columns=v["spend_columns"],dimensions=v.get("dimensions",[])); result,unmatched,audit=allocate_level_controls(controls,weights,level=level,spend_columns=v["spend_columns"],dimensions=v.get("dimensions",[]),unmatched_policy=z.get("unmatched_policy","retain"),reconciliation_tolerance=z.get("reconciliation_tolerance",1e-8)); result["source_geography_level"]=level; results.append(result); audits.append(audit); write_table(unmatched,out/"diagnostics"/f"visa_unmatched_{level}.parquet"); del controls,result,unmatched,audit; gc.collect()
+ final=pd.concat(results,ignore_index=True); audit=pd.concat(audits,ignore_index=True); write_table(final,out/"main/visa_itl1_by_geography_level.parquet"); write_table(weights,out/"lookups/postcode_itl1_weights.parquet"); write_table(cs,out/"diagnostics/addressbase_classification_summary.csv"); write_table(ad,out/"diagnostics/addressbase_reduction_summary.csv"); write_table(ua,out/"diagnostics/addressbase_unmatched_nspl.parquet"); write_table(wd,out/"diagnostics/weight_validation.csv"); write_table(status,out/"diagnostics/visa_geography_status.csv"); write_table(sq,out/"diagnostics/visa_spend_quality.csv"); write_table(ni,out/"diagnostics/nspl_invalid.parquet"); write_table(audit,out/"reconciliation/reconciliation.csv"); write_table(pd.concat(mem,ignore_index=True),out/"diagnostics/memory_report.csv"); (out/"manifest.json").write_text(json.dumps({"version":"0.3.0"},indent=2))

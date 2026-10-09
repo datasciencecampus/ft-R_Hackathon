@@ -1,0 +1,26 @@
+nspl:
+  postcode_column: postcode
+  region_code_column: rgn_code
+addressbase:
+  input_mode: raw
+  postcode_column: postcode
+  classification_column: classification_code
+  commercial_classification: C
+  missing_classification_policy: exclude
+  property_id_column: null
+  deduplicate_properties: false
+  count_column: commercial_property_count
+visa:
+  postcode_level_column: merchant_location_level
+  postcode_code_column: merchant_location
+  postcode_levels: {all: All, area: Postal Area, district: Postal District, sector: Postal Sector, unit: Unit}
+  unknown_level_policy: retain
+  spend_columns: [spend]
+  dimensions: [period, mcg]
+  suppressed_tokens: []
+allocation:
+  levels: [area, district, sector]
+  unmatched_policy: retain
+  weight_tolerance: 1.0e-10
+  reconciliation_tolerance: 1.0e-8
+region_names: {}
